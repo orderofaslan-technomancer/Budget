@@ -1,7 +1,113 @@
 {
   "currency": "$",
   "weeklyBudget": 450,
-  "spent": 0,
-  "updated": "2026-08-01T09:00:00Z",
-  "transactions": []
+  "spent": 270.78,
+  "updated": "2026-08-01T16:59:39-04:00",
+  "transactions": [
+    {
+      "label": "Sam's Club",
+      "amount": 61.37,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Amazon",
+      "amount": 17.07,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Books-A-Million",
+      "amount": 16.42,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Amazon Prime Video",
+      "amount": 10.94,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Taco Bell",
+      "amount": 10.15,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Panda Express",
+      "amount": 9.31,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Panda Express",
+      "amount": 9.29,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "McDonald's",
+      "amount": 2.84,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Dunkin'",
+      "amount": 1.85,
+      "date": "2026-07-26"
+    },
+    {
+      "label": "Shell",
+      "amount": 5.86,
+      "date": "2026-07-27"
+    },
+    {
+      "label": "Amazon",
+      "amount": 17.51,
+      "date": "2026-07-28"
+    },
+    {
+      "label": "Sam's Club",
+      "amount": 34.72,
+      "date": "2026-07-29"
+    },
+    {
+      "label": "Amazon",
+      "amount": 15.32,
+      "date": "2026-07-29"
+    },
+    {
+      "label": "Sam's Club",
+      "amount": 6.57,
+      "date": "2026-07-29"
+    },
+    {
+      "label": "Recreation.gov",
+      "amount": 2.0,
+      "date": "2026-07-29"
+    },
+    {
+      "label": "Dc Riverside Pigeon",
+      "amount": 10.87,
+      "date": "2026-07-31"
+    },
+    {
+      "label": "Bojangles",
+      "amount": 5.58,
+      "date": "2026-07-31"
+    },
+    {
+      "label": "Amazon",
+      "amount": 3.36,
+      "date": "2026-07-31"
+    },
+    {
+      "label": "Buc-ee's",
+      "amount": 2.1,
+      "date": "2026-07-31"
+    },
+    {
+      "label": "Dc Emergent",
+      "amount": 20.0,
+      "date": "2026-08-01"
+    },
+    {
+      "label": "Amazon Prime Video",
+      "amount": 7.65,
+      "date": "2026-08-01"
+    }
+  ]
 }
