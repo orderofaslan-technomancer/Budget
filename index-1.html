@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0B1016" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Weekly Budget</title>
+
+<!--
+  ============================================================
+  WEEKLY BUDGET DASHBOARD
+  ============================================================
+
+  This page reads a small JSON "mailbox" and shows how much
+  is safe to spend today and for the rest of the week.
+
+  1) OpenClaw updates the JSON (the mailbox) daily / on request.
+  2) You tap the home-screen shortcut -> it reads the mailbox.
+
+  ---- SET YOUR MAILBOX LINK HERE ----
+  Paste the raw URL of your GitHub Gist (or any JSON link) below.
+  Leave it "" to see demo data.
+-->
+<script>
+  const CONFIG = {
+    DATA_URL: "budget.json", // reads the budget.json sitting next to this page
+    WEEK_STARTS_ON: 0        // 0 = Sunday, 1 = Monday
+  };
+
+  /*  THE MAILBOX (JSON) SHOULD LOOK LIKE THIS — this is all OpenClaw needs to write:
+
+      {
+        "currency": "$",
+        "weeklyBudget": 400,
+        "spent": 259.50,
+        "updated": "2026-08-01T09:02:00-07:00",
+        "transactions": [
+          { "label": "Groceries", "amount": 62.40, "date": "2026-07-31" },
+          { "label": "Gas",       "amount": 41.10, "date": "2026-07-30" }
+        ]
+      }
+
+      Only "weeklyBudget" and "spent" are required. Everything else is optional.
+  */
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#0B1016;
+    --panel:#121a24;
+    --panel-2:#0f1620;
+    --line:#1e2b38;
+    --cyan:#35E0E6;
+    --cyan-dim:#1a7f83;
+    --text:#E6F0F4;
+    --muted:#6b7f8d;
+    --amber:#F5B851;
+    --red:#FF6B6B;
+    --safe:var(--cyan);
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+
+  html,body{ height:100%; }
+
+  body{
+    background:
+      radial-gradient(120% 80% at 50% -10%, #10202b 0%, var(--ink) 55%) fixed;
+    color:var(--text);
+    font-family:"Space Grotesk", system-ui, -apple-system, sans-serif;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    padding:
+      calc(env(safe-area-inset-top) + 22px)
+      20px
+      calc(env(safe-area-inset-bottom) + 22px);
+    max-width:520px;
+    margin:0 auto;
+    user-select:none;
+  }
+
+  .top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:500;
+  }
+  .eyebrow b{ color:var(--cyan); font-weight:700; }
+
+  .refresh{
+    width:38px; height:38px;
+    border:1px solid var(--line);
+    border-radius:11px;
+    background:var(--panel);
+    color:var(--muted);
+    display:grid; place-items:center;
+    cursor:pointer;
+    transition:transform .5s ease, color .2s, border-color .2s;
+  }
+  .refresh:active{ color:var(--cyan); border-color:var(--cyan-dim); }
+  .refresh.spin{ transform:rotate(360deg); }
+  .refresh svg{ width:18px; height:18px; }
+
+  /* ---- hero ring ---- */
+  .hero{
+    flex:1 1 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    position:relative;
+    min-height:300px;
+  }
+  .ring-wrap{ position:relative; width:min(74vw,300px); aspect-ratio:1; }
+  .ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
+  .track{ fill:none; stroke:var(--line); stroke-width:11; }
+  .prog{
+    fill:none;
+    stroke:var(--safe);
+    stroke-width:11;
+    stroke-linecap:round;
+    filter:drop-shadow(0 0 10px var(--safe));
+    transition:stroke-dashoffset 1s cubic-bezier(.22,1,.36,1), stroke .6s;
+  }
+
+  .center{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center;
+  }
+  .center .cap{
+    font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:4px;
+  }
+  .center .amt{
+    font-family:"JetBrains Mono", monospace;
+    font-weight:800;
+    font-size:clamp(38px,13vw,58px);
+    line-height:1;
+    color:var(--text);
+    text-shadow:0 0 22px rgba(53,224,230,.28);
+  }
+  .center .amt .cur{ color:var(--muted); font-size:.5em; vertical-align:top; margin-right:2px; }
+  .center .sub{
+    margin-top:9px; font-size:13px; color:var(--muted); letter-spacing:.02em;
+  }
+  .center .sub b{ color:var(--text); font-weight:600; }
+
+  .flag{
+    margin-top:14px;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    padding:5px 11px; border-radius:100px;
+    border:1px solid var(--line); color:var(--muted);
+    display:none;
+  }
+  .flag.show{ display:inline-block; }
+  .flag.warn{ color:var(--amber); border-color:#5a4a24; background:rgba(245,184,81,.06); }
+  .flag.over{ color:var(--red); border-color:#5a2b2b; background:rgba(255,107,107,.07); }
+
+  /* ---- stat row ---- */
+  .stats{
+    display:grid; grid-template-columns:repeat(3,1fr);
+    border:1px solid var(--line);
+    border-radius:16px;
+    overflow:hidden;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    margin-top:6px;
+  }
+  .stat{ padding:15px 10px; text-align:center; }
+  .stat + .stat{ border-left:1px solid var(--line); }
+  .stat .k{ font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+  .stat .v{
+    margin-top:6px;
+    font-family:"JetBrains Mono", monospace;
+    font-weight:600; font-size:19px;
+  }
+  .stat .v.left{ color:var(--cyan); }
+
+  /* ---- transactions ---- */
+  .recent{ margin-top:18px; }
+  .recent h2{
+    font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--muted); font-weight:500; margin-bottom:8px; padding-left:2px;
+  }
+  .tx{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:11px 2px;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .tx:last-child{ border-bottom:none; }
+  .tx .lbl{ color:var(--text); }
+  .tx .rt{ display:flex; align-items:baseline; gap:10px; }
+  .tx .amt2{ font-family:"JetBrains Mono", monospace; font-weight:600; color:var(--text); }
+  .tx .dt{ font-size:11px; color:var(--muted); min-width:34px; text-align:right; }
+  .empty{ color:var(--muted); font-size:13px; padding:6px 2px; }
+
+  .foot{
+    margin-top:18px; text-align:center;
+    font-size:11px; color:var(--muted); letter-spacing:.03em;
+  }
+  .foot .dot{ color:var(--cyan-dim); margin:0 6px; }
+
+  /* skeleton pulse while first load */
+  .loading .prog{ opacity:.35; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  .fade{ animation:fade .5s ease both; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body class="loading">
+
+  <div class="top">
+    <div class="eyebrow" id="eyebrow">This Week <b id="range">·</b></div>
+    <button class="refresh" id="refresh" aria-label="Refresh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="hero">
+    <div class="ring-wrap">
+      <svg viewBox="0 0 120 120">
+        <circle class="track" cx="60" cy="60" r="52"></circle>
+        <circle class="prog" id="ring" cx="60" cy="60" r="52"
+                stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+      </svg>
+      <div class="center">
+        <div class="cap">Safe to spend today</div>
+        <div class="amt" id="today"><span class="cur">$</span>0</div>
+        <div class="sub" id="sub">—</div>
+      </div>
+    </div>
+    <span class="flag" id="flag"></span>
+  </div>
+
+  <div class="stats fade">
+    <div class="stat"><div class="k">Budget</div><div class="v" id="s-budget">—</div></div>
+    <div class="stat"><div class="k">Spent</div><div class="v" id="s-spent">—</div></div>
+    <div class="stat"><div class="k">Left</div><div class="v left" id="s-left">—</div></div>
+  </div>
+
+  <div class="recent" id="recent-wrap" style="display:none">
+    <h2>Recent</h2>
+    <div id="recent"></div>
+  </div>
+
+  <div class="foot">
+    <span id="updated">—</span><span class="dot">•</span><span>tap ring to refresh</span>
+  </div>
+
+<script>
+/* ---------------- demo fallback ---------------- */
+const DEMO = {
+  currency:"$", weeklyBudget:400, spent:259.50,
+  updated:new Date().toISOString(),
+  transactions:[
+    {label:"Groceries", amount:62.40, date:"2026-07-31"},
+    {label:"Gas",       amount:41.10, date:"2026-07-30"},
+    {label:"Coffee",    amount:6.75,  date:"2026-07-30"},
+    {label:"Pharmacy",  amount:23.80, date:"2026-07-29"}
+  ]
+};
+
+const RING_LEN = 2 * Math.PI * 52; // 326.7
+const $ = id => document.getElementById(id);
+
+function money(cur, n){
+  const v = Math.abs(n).toLocaleString(undefined,{minimumFractionDigits: n%1?2:0, maximumFractionDigits:2});
+  return cur + v;
+}
+
+function weekInfo(startsOn){
+  const now = new Date();
+  const dow = now.getDay();                 // 0..6, Sun=0
+  const offset = (dow - startsOn + 7) % 7;   // days since week start
+  const total = 7;
+  const elapsed = offset;                    // full days already passed
+  const daysLeft = total - offset;           // includes today
+  const start = new Date(now); start.setDate(now.getDate() - offset);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  const fmt = d => d.toLocaleDateString(undefined,{month:"short", day:"numeric"});
+  return { total, elapsed, daysLeft, range:`${fmt(start)}–${fmt(end)}` };
+}
+
+function render(data, isDemo){
+  const cur = data.currency || "$";
+  const budget = Number(data.weeklyBudget) || 0;
+  const spent  = Number(data.spent) || 0;
+  const left   = budget - spent;
+  const wk = weekInfo(CONFIG.WEEK_STARTS_ON);
+  const safeToday = wk.daysLeft > 0 ? left / wk.daysLeft : left;
+
+  // range label
+  $("range").textContent = "· " + wk.range;
+
+  // hero number
+  const shown = Math.max(0, Math.floor(safeToday));
+  $("today").innerHTML = `<span class="cur">${cur}</span>${shown.toLocaleString()}`;
+  $("sub").innerHTML = left >= 0
+    ? `<b>${money(cur,left)}</b> left · ${wk.daysLeft} day${wk.daysLeft!==1?"s":""} to go`
+    : `<b>${money(cur,left)}</b> over · ${wk.daysLeft} day${wk.daysLeft!==1?"s":""} to go`;
+
+  // ring = fraction of budget spent
+  const frac = budget > 0 ? Math.min(spent / budget, 1) : 0;
+  $("ring").style.strokeDashoffset = RING_LEN * (1 - frac);
+
+  // pace / color state
+  const pacedShare = budget * (wk.elapsed / wk.total); // expected spend by start of today
+  const flag = $("flag");
+  flag.className = "flag";
+  if(left < 0){
+    document.documentElement.style.setProperty("--safe","var(--red)");
+    flag.classList.add("show","over"); flag.textContent = "Over budget";
+  } else if(spent > pacedShare * 1.08 && wk.elapsed > 0){
+    document.documentElement.style.setProperty("--safe","var(--amber)");
+    flag.classList.add("show","warn"); flag.textContent = "Spending ahead of pace";
+  } else {
+    document.documentElement.style.setProperty("--safe","var(--cyan)");
+    flag.classList.remove("show");
+  }
+
+  // stats
+  $("s-budget").textContent = money(cur, budget);
+  $("s-spent").textContent  = money(cur, spent);
+  $("s-left").textContent   = money(cur, left);
+
+  // transactions
+  const tx = Array.isArray(data.transactions) ? data.transactions.slice(0,6) : [];
+  const wrap = $("recent-wrap"), list = $("recent");
+  if(tx.length){
+    wrap.style.display = "block";
+    list.innerHTML = tx.map(t=>{
+      const d = t.date ? new Date(t.date).toLocaleDateString(undefined,{weekday:"short"}) : "";
+      return `<div class="tx"><span class="lbl">${escapeHtml(t.label||"—")}</span>
+        <span class="rt"><span class="amt2">−${money(cur, Number(t.amount)||0)}</span>
+        <span class="dt">${d}</span></span></div>`;
+    }).join("");
+  } else { wrap.style.display = "none"; }
+
+  // footer
+  const up = data.updated ? new Date(data.updated) : new Date();
+  const t = up.toLocaleTimeString(undefined,{hour:"numeric", minute:"2-digit"});
+  $("updated").textContent = (isDemo ? "Demo data · " : "Updated ") + t;
+
+  document.body.classList.remove("loading");
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+async function load(){
+  const btn = $("refresh"); btn.classList.add("spin");
+  setTimeout(()=>btn.classList.remove("spin"), 600);
+  if(!CONFIG.DATA_URL){ render(DEMO, true); return; }
+  try{
+    const res = await fetch(CONFIG.DATA_URL, {cache:"no-store"});
+    if(!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    render(data, false);
+  }catch(e){
+    // couldn't reach the mailbox — show demo so the screen is never blank
+    render(DEMO, true);
+    $("updated").textContent = "Couldn't reach mailbox · showing demo";
+  }
+}
+
+$("refresh").addEventListener("click", load);
+document.querySelector(".ring-wrap").addEventListener("click", load);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) load(); });
+load();
+</script>
+</body>
+</html>
